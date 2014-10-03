@@ -8,13 +8,13 @@ String applicationId="a40ea2cd93662d60037a60c32ccd6763";
 
 main()
 {
-  Logger.root.level = Level.ALL;
+  Logger.root.level = Level.INFO;
   Logger.root.onRecord.listen((LogRecord rec) {
     print('${rec.level.name}: ${rec.time}: ${rec.message}');
   });
 
-  //Api api = new Api(applicationId);
-  ApiCache api = new ApiCache();
+  Api api = new Api(applicationId);
+  //ApiCache api = new ApiCache();
   DataPreparer dataPreparer = new DataPreparer(api);
   dataPreparer.prepare((tankQueues) {
     Balancer balancer = new Balancer();

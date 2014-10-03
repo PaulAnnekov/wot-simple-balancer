@@ -16,7 +16,7 @@ class DataPreparer {
   DataPreparer(this._api);
 
   void prepare(Function onDone) {
-    _log.info('Data preparetion started.');
+    _log.info('Data preparation started.');
 
     Future done = _getClans()
       .then(_getClansMembers)
@@ -43,10 +43,10 @@ class DataPreparer {
 
     this._tanksQueues = [
         {
-            "clanId": clan1
+            'clanId': clan1
         },
         {
-            "clanId": clan2
+            'clanId': clan2
         },
     ];
 
@@ -54,6 +54,8 @@ class DataPreparer {
   }
 
   Future _getAccountTanks(data) {
+    _log.info('Getting accounts tanks.');
+
     var accountIds=[];
     data['data'][data['data'].keys.first]['members']
     .forEach((accountId,member) {
@@ -74,25 +76,25 @@ class DataPreparer {
   }
 
   Future _getTanksInfo(List data) {
+    _log.info('Gettings tanks info.');
+
     List<Future> wait = new List();
 
     int current=0;
     data.forEach((Map data) {
       List tanksId=[];
-      _tanksQueues[current]["tanks"]={};
+      _tanksQueues[current]['tanks']={};
 
-      data["data"].forEach((accountId, List tanks) {
+      data['data'].forEach((accountId, List tanks) {
         Map tank = tanks[_random.nextInt(tanks.length)];
-        tanksId.add(tank["tank_id"]);
+        tanksId.add(tank['tank_id']);
         _tanksQueues[current]['tanks'][tank['tank_id']] = {
             'accountId': accountId,
             'mark_of_mastery': tank['mark_of_mastery']
         };
       });
 
-      Api api = new Api("a40ea2cd93662d60037a60c32ccd6763");
-
-      wait.add(api.getTanksInfo(tanksId));
+      wait.add(_api.getTanksInfo(tanksId));
       current++;
     });
 
@@ -105,12 +107,14 @@ class DataPreparer {
       response['data'].forEach((tankId, Map info) {
         tankId = int.parse(tankId);
         _tanksQueues[current]['tanks'][tankId].addAll({
-            "gun_damage_min": info["gun_damage_min"],
-            "gun_damage_max": info["gun_damage_max"],
-            "max_health": info["max_health"],
+            'gun_damage_min': info['gun_damage_min'],
+            'gun_damage_max': info['gun_damage_max'],
+            'max_health': info['max_health'],
         });
       });
       current++;
     });
+
+    _log.info('Data is prepared.');
   }
 }

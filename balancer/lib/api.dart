@@ -3,36 +3,52 @@ library balancer.api;
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
+import 'package:logging/logging.dart';
 
 class Api
 {
   final String _applicationId;
   final String _host = "api.worldoftanks.ru";
+  final Logger _log = new Logger('balancer.api');
 
   Api(this._applicationId);
 
-  Future<dynamic> _request(String path, Map<String, String> query) {
-    Completer completer = new Completer();
+  void _request_api(String path, Map<String, String> query, Completer completer) {
+    _log.fine(query);
 
     Map<String, String> updatedQuery = new Map.from(query);
     updatedQuery["application_id"] = _applicationId;
 
-    print(query);
     Uri url = new Uri.https(_host, 'wot/' + path + '/', updatedQuery);
+    _log.config(url);
 
     HttpClient client = new HttpClient();
-    print(url);
     client.getUrl(url)
-      .then((HttpClientRequest request) => request.close())
-      .then((HttpClientResponse response) {
-        response
-          .transform(UTF8.decoder)
-          .transform(JSON.decoder)
-          .listen((contents) {
-            print(JSON.encode(contents));
-            completer.complete(contents);
-          });
+    .then((HttpClientRequest request) => request.close())
+    .then((HttpClientResponse response) {
+      response
+      .transform(UTF8.decoder)
+      .transform(JSON.decoder)
+      .listen((contents) {
+        _log.fine(JSON.encode(contents));
+
+        if (contents['status']=='ok')
+          completer.complete(contents);
+        else
+        {
+          _log.warning('Error: ' + contents['error']['message'] + ' (' +
+            contents['error']['code'].toString() + '). Trying to repeat.');
+
+          _request_api(path, query, completer);
+        }
       });
+    });
+  }
+
+  Future<dynamic> _request(String path, Map<String, String> query) {
+    Completer completer = new Completer();
+
+    _request_api(path, query, completer);
 
     return completer.future;
   }
