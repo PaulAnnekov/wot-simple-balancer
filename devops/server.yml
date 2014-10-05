@@ -1,0 +1,29 @@
+---
+
+- hosts: all
+  sudo: yes
+
+  tasks:
+    - name: update apt
+      apt: update_cache=yes
+
+    - name: install https transport
+      apt: pkg=apt-transport-https
+
+    - name: add dart repository key
+      apt_key: url=https://dl-ssl.google.com/linux/linux_signing_key.pub
+
+    - name: add repository for latest dart
+      apt_repository: repo='deb https://storage.googleapis.com/download.dartlang.org/linux/debian stable main'
+
+    - name: update apt
+      apt: update_cache=yes
+
+    - name: upgrade system packages
+      apt: upgrade=full
+
+    - name: install Dart
+      apt: pkg=dart
+   
+    - name: write /etc/profile.d/balancer_references.sh
+      template: src=balancer_references.sh dest=/etc/profile.d/balancer_references.sh

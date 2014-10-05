@@ -7,20 +7,41 @@ import 'package:logging/logging.dart';
 
 class Api
 {
+  /**
+   * Application ID for API requests.
+   */
   final String _applicationId;
+
+  /**
+   * API host.
+   */
   final String _host = "api.worldoftanks.ru";
+
+  /**
+   * Logger.
+   */
   final Logger _log = new Logger('balancer.api');
+
+  /**
+   * Total time of all requests.
+   */
+  int totalTime = 0;
 
   Api(this._applicationId);
 
+  /**
+   * Makes api request [path] with parameters [query] and calls [completer] when
+   * request is completed successfully. Will try to repeat request infinitely.
+   */
   void _request_api(String path, Map<String, String> query, Completer completer) {
-    _log.fine(query);
-
     Map<String, String> updatedQuery = new Map.from(query);
     updatedQuery["application_id"] = _applicationId;
 
     Uri url = new Uri.https(_host, 'wot/' + path + '/', updatedQuery);
     _log.config(url);
+
+    // Measure request time.
+    Stopwatch stopwatch = new Stopwatch()..start();
 
     HttpClient client = new HttpClient();
     client.getUrl(url)
@@ -30,6 +51,9 @@ class Api
       .transform(UTF8.decoder)
       .transform(JSON.decoder)
       .listen((contents) {
+        stopwatch.stop();
+        totalTime += stopwatch.elapsedMilliseconds;
+
         _log.fine(JSON.encode(contents));
 
         if (contents['status']=='ok')
@@ -59,6 +83,7 @@ class Api
    */
   Future getClans() {
     return _request('globalwar/top',{
+      'fields': 'clan_id,name,members_count',
       'map_id': 'globalmap',
       'order_by': 'provinces_count'
     });
@@ -69,7 +94,8 @@ class Api
    */
   Future getClanMembers(List<int> clanIds) {
     return _request('clan/info',{
-        'clan_id': clanIds.join(','),
+      'fields': 'clan_id,members.account_id',
+      'clan_id': clanIds.join(','),
     });
   }
 
@@ -78,7 +104,8 @@ class Api
    */
   Future getAccountTanks(List accountIds) {
     return _request('account/tanks',{
-        'account_id': accountIds.getRange(0,accountIds.length<100?accountIds.length:100).join(','),
+      'fields': 'tank_id,mark_of_mastery',
+      'account_id': accountIds.getRange(0,accountIds.length<100?accountIds.length:100).join(','),
     });
   }
 
@@ -87,7 +114,17 @@ class Api
    */
   Future getTanksInfo(List tankIds) {
     return _request('encyclopedia/tankinfo',{
-        'tank_id': tankIds.join(','),
+      'fields': 'gun_damage_min,gun_damage_max,max_health,name_i18n',
+      'tank_id': tankIds.join(','),
+    });
+  }
+
+  /**
+   * Gets information about tanks.
+   */
+  Future getTanksList() {
+    return _request('encyclopedia/tanks',{
+      'fields': 'tank_id,level,name_i18n'
     });
   }
 }
