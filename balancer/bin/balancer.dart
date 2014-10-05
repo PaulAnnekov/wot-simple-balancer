@@ -35,21 +35,23 @@ main(List<String> arguments)
 
 Map init(List<String> arguments) {
   var parser = new ArgParser();
-  parser.addFlag('verbose', abbr: 'v', defaultsTo: false,
-      help: 'Displays request results and some additional data');
-  parser.addFlag('help', abbr: 'h', defaultsTo: false,
-      help: 'Displays this usage guide');
-  parser.addOption('app-id', abbr: 'a', help: 'Defines application ID');
+  parser.addOption('app-id', abbr: 'a', help: 'Defines application ID (required).');
+  parser.addFlag('verbose', abbr: 'v', defaultsTo: false, negatable: false,
+      help: 'Displays API requests info and some additional data.');
+  parser.addFlag('help', abbr: 'h', defaultsTo: false, negatable: false,
+      help: 'Displays this usage guide.');
+
   var results = parser.parse(arguments);
 
   if (results['help']) {
+    print('S&S (Simple and stupid) balancer for WOT. Parameters:');
     print(parser.getUsage());
     exit(0);
   }
 
   if (results['app-id'] == null)
   {
-    print('"--app-id" argument was not provided.');
+    print('Please, provide "--app-id/-a" argument.');
     exit(1);
   }
 

@@ -1,10 +1,7 @@
 library balancer;
 
-import "dart:async";
 import "dart:math";
-import "dart:io";
 import "package:logging/logging.dart";
-import "package:balancer/api.dart";
 
 class Balancer {
   final Logger _log = new Logger('balancer');
@@ -50,7 +47,7 @@ class Balancer {
       }
       else {
         tryNumber++;
-        _log.config("Match was not found from $tryNumber try.");
+        _log.fine("Match was not found from $tryNumber try.");
       }
     }
 

@@ -34,11 +34,13 @@ class Api
    * request is completed successfully. Will try to repeat request infinitely.
    */
   void _request_api(String path, Map<String, String> query, Completer completer) {
+    _log.config('Request to $path.');
+
     Map<String, String> updatedQuery = new Map.from(query);
     updatedQuery["application_id"] = _applicationId;
 
     Uri url = new Uri.https(_host, 'wot/' + path + '/', updatedQuery);
-    _log.config(url);
+    _log.fine(url);
 
     // Measure request time.
     Stopwatch stopwatch = new Stopwatch()..start();
