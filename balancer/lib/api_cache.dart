@@ -5,6 +5,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:balancer/api.dart';
 
+@deprecated
 class ApiCache implements Api
 {
   int _accountTanksRequest = 0;

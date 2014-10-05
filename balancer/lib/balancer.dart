@@ -3,23 +3,50 @@ library balancer;
 import "dart:math";
 import "package:logging/logging.dart";
 
+/**
+ * Creates two balanced teams from queues.
+ */
 class Balancer {
+  /**
+   * Logger.
+   */
   final Logger _log = new Logger('balancer');
+
+  /**
+   * Random.
+   */
   Random _random = new Random();
+
+  /**
+   * Number of members in each team.
+   */
   static const TEAM_MAX = 15;
 
-  List<List> run(List tankQueues) {
+  /**
+   * Starts balancing [tankQueues] and returns result with one list for each
+   * team.
+   */
+  Map<int, List> run(List tankQueues) {
     _log.info('Balancer algorithm started.');
 
-    // TODO: check if queues have at least 15 tanks in each queue.
-    List<List> results = _balanceTanks(tankQueues);
+    if (tankQueues[0]['tanks'].length < TEAM_MAX ||
+        tankQueues[1]['tanks'].length < TEAM_MAX) {
+      _log.info('One of queues have less than 15 tanks. Restart app, please.');
+
+      return null;
+    }
+
+    Map<int, List> results = _balanceTanks(tankQueues);
 
     _log.info('Balancing completed.');
 
     return results;
   }
 
-  List<List> _balanceTanks(List tankQueues)
+  /**
+   * Creates 2 balanced teams from [tankQueues].
+   */
+  Map<int, List> _balanceTanks(List tankQueues)
   {
     Map queueA = tankQueues[0];
     Map queueB = tankQueues[1];
@@ -30,6 +57,8 @@ class Balancer {
 
     int tryNumber = 0;
     while (resultFirst.length < TEAM_MAX) {
+      tryNumber++;
+
       int tankIndex = _random.nextInt(tanksA.length);
       var tankA = tanksA[tankIndex];
 
@@ -46,14 +75,20 @@ class Balancer {
         tanksB.removeAt(opponentIndex);
       }
       else {
-        tryNumber++;
         _log.fine("Match was not found from $tryNumber try.");
       }
     }
 
-    return [resultFirst, resultSecond];
+    return {
+      queueA['clanId']: resultFirst,
+      queueB['clanId']: resultSecond
+    };
   }
 
+  /**
+   * Checks if [tankA] is good opponent for [tankB] tanking into account
+   * [tryNumber].
+   */
   bool _matchCheck(Map tankA, Map tankB, int tryNumber) {
     double difference = (tankA['balance']-tankB['balance']).abs();
 
@@ -92,6 +127,10 @@ class Balancer {
     }
   }
 
+  /**
+   * Calculates balances of tanks in [tankQueue]. Adds `balance` parameter to
+   * each tank.
+   */
   List<Map> _calculateBalances(List tankQueue)
   {
     List<Map> balances=[];
@@ -105,6 +144,9 @@ class Balancer {
     return balances;
   }
 
+  /**
+   * Gets balance weight of [tank].
+   */
   double _getWeight(Map tank)
   {
     return tank['gun_damage_min'] + tank['gun_damage_max'] +

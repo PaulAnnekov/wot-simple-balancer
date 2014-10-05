@@ -5,13 +5,43 @@ import "dart:math";
 import "package:logging/logging.dart";
 import "package:balancer/api.dart";
 
+/**
+ * Prepares two queues of tanks for balance.
+ */
 class DataPreparer {
+  /**
+   * Logger.
+   */
   final Logger _log = new Logger('balancer');
+
+  /**
+   * API object.
+   */
   Api _api;
+
+  /**
+   * Random generator.
+   */
   Random _random = new Random();
+
+  /**
+   * Tanks queues.
+   */
   List<Map> _tanksQueues=[];
+
+  /**
+   * All tanks of WOT.
+   */
   Map _tanks;
+
+  /**
+   * Minimum required tank level.
+   */
   static const MIN_LEVEL=4;
+
+  /**
+   * Maximum required tank level.
+   */
   static const MAX_LEVEL=6;
 
   /**
@@ -22,7 +52,7 @@ class DataPreparer {
   /**
    * Allowed minimum of accounts in clans.
    */
-  static const MIN_ACCOUNTS=50;
+  static const MIN_ACCOUNTS=30;
 
   /**
    * Number of top clans we choose for random selection.
@@ -31,15 +61,14 @@ class DataPreparer {
 
   DataPreparer(this._api);
 
+  /**
+   * Prepares data with two queues for balancing.
+   */
   void prepare(Function onDone) {
     _log.info('Data preparation started.');
     Stopwatch stopwatch = new Stopwatch()..start();
 
-    Future done = _getTanks()
-      .then((Map response) {
-        _tanks = response['data'];
-      })
-      .then(_getClans)
+    Future done = _init()
       .then(_getClansMembers)
       .then(_getAccountTanks)
       .then(_getTanksInfo)
@@ -50,21 +79,23 @@ class DataPreparer {
         totalTime = stopwatch.elapsedMilliseconds;
 
         onDone(_tanksQueues);
+      })
+      .catchError((error) {
+        _log.shout(error);
+        onDone(null);
       });
   }
 
-  Future _getTanks() {
-    return _api.getTanksList();
+  Future _init() {
+    return Future.wait([_api.getTanksList(),_api.getClans()]);
   }
 
-  Future _getClans(data) {
-    return _api.getClans();
-  }
+  Future _getClansMembers(List responses) {
+    _log.info('Clans and tanks received.');
 
-  Future _getClansMembers(response) {
-    _log.info('Clans received.');
+    _tanks = responses[0];
 
-    List<Map> clans = new List.from(response['data'].getRange(0,CLANS_TOP_COUNT));
+    List<Map> clans = new List.from(responses[1].getRange(0,CLANS_TOP_COUNT));
     List<int> clanIds = [];
 
     while (this._tanksQueues.length != 2) {
@@ -83,12 +114,12 @@ class DataPreparer {
     return _api.getClanMembers(clanIds);
   }
 
-  Future _getAccountTanks(Map response) {
+  Future _getAccountTanks(Map data) {
     _log.info('Getting accounts tanks.');
 
     List wait = [];
 
-    response['data'].forEach((String clanId, Map clanInfo) {
+    data.forEach((String clanId, Map clanInfo) {
       List accountIds = [];
       clanInfo['members'].forEach((String accountId, Map info) {
         accountIds.add(accountId);
@@ -106,11 +137,11 @@ class DataPreparer {
     List<Future> wait = new List();
 
     int current=0;
-    responses.forEach((Map response) {
+    responses.forEach((Map data) {
       List tanksId=[];
       _tanksQueues[current]['tanks']={};
 
-      response['data'].forEach((String accountId, List<Map> tanks) {
+      data.forEach((String accountId, List<Map> tanks) {
         List<Map> filtered = _filterTanks(tanks);
         if (filtered.isEmpty) {
           _log.fine("User $accountId has no tanks of needed level.");
@@ -133,11 +164,14 @@ class DataPreparer {
     return Future.wait(wait);
   }
 
+  /**
+   * Completes queues initialization.
+   */
   void _done(List responses) {
     int current = 0;
 
-    responses.forEach((Map response) {
-      response['data'].forEach((tankId, Map info) {
+    responses.forEach((Map data) {
+      data.forEach((tankId, Map info) {
         tankId = int.parse(tankId);
 
         _tanksQueues[current]['tanks'][tankId].addAll({

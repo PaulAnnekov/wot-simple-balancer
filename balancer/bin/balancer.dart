@@ -16,11 +16,18 @@ main(List<String> arguments)
   Logger log = new Logger('balancer');
 
   Api api = new Api(params['applicationId']);
+  if (params['repeat'])
+    api.maxFails=null;
+
   DataPreparer dataPreparer = new DataPreparer(api);
   dataPreparer.prepare((tankQueues) {
+    if (tankQueues == null)
+      exit(1);
+
     Balancer balancer = new Balancer();
-    List<List> results = balancer.run(tankQueues);
-    Output.output(results);
+    Map<int, List> results = balancer.run(tankQueues);
+    if (results != null)
+      Output.output(results);
 
     stopwatch.stop();
     print('\n');
@@ -40,6 +47,8 @@ Map init(List<String> arguments) {
       help: 'Displays API requests info and some additional data.');
   parser.addFlag('help', abbr: 'h', defaultsTo: false, negatable: false,
       help: 'Displays this usage guide.');
+  parser.addFlag('repeat', abbr: 'r', defaultsTo: false, negatable: false,
+        help: 'Repeat API requests infinitely if error occured. Otherwise they will be repeated only 10 times.');
 
   var results = parser.parse(arguments);
 
@@ -67,6 +76,7 @@ Map init(List<String> arguments) {
   });
 
   return {
-    'applicationId': results['app-id']
+    'applicationId': results['app-id'],
+    'repeat': results['repeat']
   };
 }

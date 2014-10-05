@@ -5,6 +5,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:logging/logging.dart';
 
+/**
+ * Makes requests to WOT api.
+ */
 class Api
 {
   /**
@@ -27,7 +30,34 @@ class Api
    */
   int totalTime = 0;
 
+  /**
+   * Current number of failed requests.
+   */
+  int failedRequests = 0;
+
+  /**
+   * Maximum number of fails after which they won't be repeated.
+   */
+  int maxFails = 10;
+
   Api(this._applicationId);
+
+  /**
+   * Handles request exception and retries/completes it.
+   */
+  void handleException(path, query, Completer completer, exception) {
+    if (maxFails == null || failedRequests < maxFails)
+      _log.warning('Error during API request: $exception. Trying to repeat.');
+    else {
+      completer.completeError(new Exception('Error during API request: '
+          '$exception. Stopping repetition. It was the last chance.'));
+
+      return;
+    }
+
+    failedRequests++;
+    _request_api(path, query, completer);
+  }
 
   /**
    * Makes api request [path] with parameters [query] and calls [completer] when
@@ -50,27 +80,32 @@ class Api
     .then((HttpClientRequest request) => request.close())
     .then((HttpClientResponse response) {
       response
-      .transform(UTF8.decoder)
-      .transform(JSON.decoder)
-      .listen((contents) {
-        stopwatch.stop();
-        totalTime += stopwatch.elapsedMilliseconds;
+        .transform(UTF8.decoder)
+        .transform(JSON.decoder)
+        .listen((contents) {
+          stopwatch.stop();
+          totalTime += stopwatch.elapsedMilliseconds;
 
-        _log.fine(JSON.encode(contents));
+          _log.fine(JSON.encode(contents));
 
-        if (contents['status']=='ok')
-          completer.complete(contents);
-        else
-        {
-          _log.warning('Error: ' + contents['error']['message'] + ' (' +
-            contents['error']['code'].toString() + '). Trying to repeat.');
-
-          _request_api(path, query, completer);
-        }
-      });
+          if (contents['status']=='ok')
+            completer.complete(contents['data']);
+          else
+          {
+            var message = 'error in result: ' + contents['error']['message'] +
+                ' (' + contents['error']['code'].toString() + ')';
+            handleException(path, query, completer, new Exception(message));
+          }
+        });
+    })
+    .catchError((Exception exception) {
+      handleException(path, query, completer, exception);
     });
   }
 
+  /**
+   * Wrapper for making API request that returns Future.
+   */
   Future<dynamic> _request(String path, Map<String, String> query) {
     Completer completer = new Completer();
 
