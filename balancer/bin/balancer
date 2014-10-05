@@ -2,4 +2,4 @@
 
 cd "$(dirname "$0")"
 cd ..
-pub run balancer $@ 
+dart build/bin/balancer.dart $@

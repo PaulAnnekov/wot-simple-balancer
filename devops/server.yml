@@ -27,3 +27,8 @@
    
     - name: write /etc/profile.d/balancer_references.sh
       template: src=balancer_references.sh dest=/etc/profile.d/balancer_references.sh
+
+    - name: Build project
+      shell: cd /home/balancer && /usr/lib/dart/bin/pub get || true && /usr/lib/dart/bin/pub build --all --mode=debug
+      sudo: yes
+      sudo_user: vagrant

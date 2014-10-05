@@ -4,3 +4,6 @@ dependencies:
   sprintf: ">=1.0.8 <2.0.0"
   intl: ">=0.11.9 <1.0.0"
   args: ">=0.12.0+2 <1.0.0"
+transformers:
+- $dart2js:
+    commandLineOptions: ['--output-type=dart']
