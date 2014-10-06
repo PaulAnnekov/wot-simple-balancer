@@ -4,6 +4,7 @@ ANSIBLE_DIR=$1
 ANSIBLE_PLAYBOOK=$2
 ANSIBLE_HOSTS=$3
 TEMP_HOSTS="/tmp/ansible_hosts"
+BACKPORTS_LIST="/etc/apt/sources.list.d/debian-wheezy-backports.list"
 
 if [ ! -f /vagrant/$ANSIBLE_PLAYBOOK ]; then
 	echo "Cannot find Ansible playbook"
@@ -15,22 +16,17 @@ if [ ! -f /vagrant/$ANSIBLE_HOSTS ]; then
 	exit 2
 fi
 
-if [ ! -d $ANSIBLE_DIR ]
-then
-	echo "Updating apt cache"
+if [ ! -f $BACKPORTS_LIST ]; then
+	echo "Installing Ansible"	
+	echo "deb http://http.debian.net/debian wheezy-backports main" >> ${BACKPORTS_LIST}
 	apt-get update
-	echo "Installing Ansible dependencies and Git"
-	apt-get install -y git python-yaml python-paramiko python-jinja2
-	echo "Cloning Ansible"
-	git clone git://github.com/ansible/ansible.git ${ANSIBLE_DIR}
-	cd ${ANSIBLE_DIR}
-	echo "Switching to version 1.6.6"
-	git checkout tags/v1.6.6
-else
-  cd ${ANSIBLE_DIR}
+	apt-get install ansible -y
 fi
 
 cp /vagrant/${ANSIBLE_HOSTS} ${TEMP_HOSTS} && chmod -x ${TEMP_HOSTS}
+
 echo "Running Ansible"
-bash -c "source hacking/env-setup && ansible-playbook /vagrant/${ANSIBLE_PLAYBOOK} --inventory-file=${TEMP_HOSTS} --connection=local"
+# Disable python output bufferization to display ansible log as it outputs.
+PYTHONUNBUFFERED="YOUR_SET" ansible-playbook /vagrant/${ANSIBLE_PLAYBOOK} --inventory-file=${TEMP_HOSTS} --connection=local
+
 rm ${TEMP_HOSTS}

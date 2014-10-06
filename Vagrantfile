@@ -18,8 +18,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # the path on the guest to mount the folder.
   config.vm.synced_folder "balancer/", "/home/balancer"
 
+  # Will remove error "stdin is not tty" but will display some excess data instead.
+  #config.ssh.pty = true
+
   config.vm.provision :shell do |sh|
     sh.path = "provision.sh"
     sh.args = "./ansible devops/server.yml devops/hosts"
+    sh.keep_color = true
   end
 end
